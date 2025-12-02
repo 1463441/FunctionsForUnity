@@ -23,18 +23,18 @@ struct GBufferFragOutput
 
 struct appdata
 {
-    float4 vertex : POSITION;
-    float3 normalOS : NORMAL;
-    float4 tangentOS : TANGENT;
-    float2 uv : TEXCOORD0;
+    half4 vertex : POSITION;
+    half3 normalOS : NORMAL;
+    half4 tangentOS : TANGENT;
+    half2 uv : TEXCOORD0;
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 struct v2f
 {
-    float4 positionCS : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    float3 positionWS : TEXCOORD1;
+    half4 positionCS : SV_POSITION;
+    half2 uv : TEXCOORD0;
+    half3 positionWS : TEXCOORD1;
     half3 normalWS : TEXCOORD2;
     half4 tangentWS : TEXCOORD3;
     #if defined(REQUIRES_TANGENT_SPACE_VIEW_DIR_INTERPOLATOR)
@@ -42,7 +42,7 @@ struct v2f
     #endif
 
     #ifdef USE_APV_PROBE_OCCLUSION
-        float4 probeOcclusion           : TEXCOORD9;
+        half4 probeOcclusion           : TEXCOORD9;
     #endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -72,7 +72,7 @@ v2f LitGBufferPassVertex(appdata v)
     #endif
     o.tangentWS.xyz = normalize(TransformObjectToWorldDir(v.tangentOS.xyz));
     
-    float tangentSign = v.tangentOS.w * unity_WorldTransformParams.w;
+    half tangentSign = v.tangentOS.w * unity_WorldTransformParams.w;
     o.tangentWS.xyz = vertexNormalInput.tangentWS;
 
   
@@ -84,7 +84,7 @@ v2f LitGBufferPassVertex(appdata v)
     return o;
 }
 
-    inline void SurfaceDataOptimized(float2 uv, out SurfaceData outSurfaceData)
+    inline void SurfaceDataOptimized(half2 uv, out SurfaceData outSurfaceData)
     {
         outSurfaceData = (SurfaceData) 0;
         half4 albedoAlpha = SampleAlbedoAlpha(uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
@@ -113,11 +113,12 @@ GBufferFragOutput LitGBufferPassFragment(v2f i)
     SurfaceData s;
     SurfaceDataOptimized(i.uv, s);
      
-    float3 normalWS;
+    half3 normalWS;
     half3 viewDirWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
 #if defined(_NORMALMAP) || defined(_DETAIL)
-    float sgn = i.tangentWS.w;
-    float3 bitangent = sgn * cross(i.normalWS.xyz, i.tangentWS.xyz);
+    half3 normalTS = SampleNormal(i.uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
+    half sgn = i.tangentWS.w;
+    half3 bitangent = sgn * cross(i.normalWS.xyz, i.tangentWS.xyz);
     normalWS = TransformTangentToWorld(normalTS, half3x3(i.tangentWS.xyz, bitangent.xyz, i.normalWS.xyz));
 #else
     normalWS = i.normalWS;
@@ -146,7 +147,7 @@ GBufferFragOutput LitGBufferPassFragment(v2f i)
 
     half3 packedSpecular;
     half smoothness;
-    #ifdef _SURFACETYPE_SPECULAR
+    #ifdef _SPECULAR_SETUP
         materialFlags |= kMaterialFlagSpecularSetup;
         packedSpecular = brdfSpecular.rgb;
     #else
@@ -163,10 +164,7 @@ GBufferFragOutput LitGBufferPassFragment(v2f i)
     output.gBuffer0 = half4(s.albedo, PackGBufferMaterialFlags(materialFlags));     //albedo 통과
     output.gBuffer1 = half4(packedSpecular, s.occlusion); //통과
     output.gBuffer2 = half4(packedNormalWS, s.smoothness);              //
-    
-    #if defined(GBUFFER_FEATURE_DEPTH)
-        output.depth = i.positionCS.z;
-    #endif
+   
         
     return output;
 }

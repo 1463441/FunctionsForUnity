@@ -317,10 +317,10 @@ Shader " Pipeline/Lit2"
             Name "ForwardGBuffer"
             Tags
             {
-                "LightMode" = "UniversalGBuffer"
+                "LightMode" = "ForwardGBuffer"
             }
             HLSLPROGRAM
-                        #pragma target 4.5
+            #pragma target 4.5
 
             // Deferred Rendering Path does not support the OpenGL-based graphics API:
             // Desktop OpenGL, OpenGL ES 3.0, WebGL 2.0.
